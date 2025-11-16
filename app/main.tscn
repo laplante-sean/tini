@@ -1,0 +1,53 @@
+[gd_scene load_steps=4 format=3 uid="uid://coyuhc8lb4672"]
+
+[ext_resource type="Theme" uid="uid://x4201jvxg42j" path="res://app/theme/main_theme.tres" id="1_s58fy"]
+[ext_resource type="Script" uid="uid://djkiff6naeywq" path="res://app/main.gd" id="1_yblnd"]
+[ext_resource type="PackedScene" uid="uid://buq6xxrwpo82x" path="res://app/pages/login_page.tscn" id="3_ysqge"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_s58fy")
+script = ExtResource("1_yblnd")
+
+[node name="LoginPage" parent="." instance=ExtResource("3_ysqge")]
+visible = false
+layout_mode = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 8
+
+[node name="LoginButton" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "Login"
+
+[node name="ItemList" type="ItemList" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+item_count = 3
+item_0/text = "Game 1"
+item_1/text = "Game 2"
+item_2/text = "Game 3"
+
+[connection signal="login_complete" from="LoginPage" to="." method="_on_login_page_login_complete"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/HBoxContainer/LoginButton" to="." method="_on_login_button_pressed"]
