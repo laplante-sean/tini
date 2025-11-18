@@ -41,16 +41,14 @@ class Headset(Enum):
 class OculusQuery:
     """
     Dataclass holding representation of GraphQL query
+
+    Meta generally does not use raw GraphQL queries over the network,
+    instead, designated queries are assigned document IDs, and callers
+    can substitute variables into these documents to create custom queries.
     """
 
-    # GraphQL document to query
-    # these often-times tend to be magic numbers that we just have to trust
     doc_id: str | None = None
-
-    # GraphQL query itself
     doc: str | None = None
-
-    # parameters injected into GraphQL query
     variables: dict[Any, Any] | None = None
 
     def encode(self, access_token: str) -> str:
@@ -96,6 +94,16 @@ class OculusClient:
         return self.make_query(
             OculusQuery(
                 doc_id="2885322071572384",
+                variables={
+                    "applicationID": app_id,
+                },
+            )
+        )
+
+    def get_app_release_channels(self, app_id: str):
+        return self.make_query(
+            OculusQuery(
+                doc_id="3828663700542720",
                 variables={
                     "applicationID": app_id,
                 },
@@ -269,7 +277,16 @@ def main():
         print("Game has no ID. Something went wrong.")
         return
 
-    download_url = f"https://securecdn.oculus.com/binaries/download/?id={game_id}&access_token={args.access_token}"
+    app_versions = client.get_app_release_channels(game_id)
+    version_id = (
+        app_versions.get("data", {})
+        .get("node", {})
+        .get("primary_binaries")
+        .get("nodes")[0]
+        .get("id", None)
+    )
+
+    download_url = f"https://securecdn.oculus.com/binaries/download/?id={version_id}&access_token={args.access_token}"
     download_progress(download_url, f"{game_name}.apk")
 
 
