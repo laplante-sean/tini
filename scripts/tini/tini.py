@@ -127,7 +127,11 @@ def main():
     )
 
     subparsers = parser.add_subparsers(dest="subcommand", required=True)
-    download_parser = subparsers.add_parser("download")
+
+    download_parser = subparsers.add_parser(
+        "download", help="Download a game from the Meta store that is owned by you."
+    )
+
     search_parser = subparsers.add_parser("search")
 
     list_parser = subparsers.add_parser(
