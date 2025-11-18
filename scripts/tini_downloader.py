@@ -74,21 +74,6 @@ class OculusClient:
             url=query.make_uri(self.OCULUS_URI, self.access_token), data=None
         ).json()
 
-    def get_dlcs(self, app_id: str):
-        return self.make_query(
-            OculusQuery(
-                doc_id="3853229151363174",
-                variables={
-                    "id": app_id,
-                    "first": 200,
-                    "last": None,
-                    "after": None,
-                    "before": None,
-                    "forward": True,
-                },
-            ),
-        )
-
     def get_app_details(self, app_id: str):
         return self.make_query(
             OculusQuery(
