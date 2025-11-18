@@ -12,4 +12,4 @@ requires-python = ">=3.10"
 distribution = false
 
 [tool.pdm.scripts]
-download = "python -m tini.downloader"
+tini = "python -m tini.tini"
