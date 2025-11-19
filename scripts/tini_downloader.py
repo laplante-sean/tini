@@ -1,5 +1,6 @@
 """Quest app APK downloader."""
-
+import os
+import re
 import json
 import argparse
 from enum import Enum
@@ -190,6 +191,22 @@ class OculusClient:
         return self.make_query(OculusQuery(doc_id="4850747515044496"))
 
 
+def dump_obj(game_name, func: str, obj: dict):
+    """Write out info for debugging."""
+    os.makedirs("./dump", exist_ok=True)
+
+    path = f"./dump/{func}.json"
+    if game_name:
+        san_name = re.sub(r'[^a-zA-Z0-9 ._-]', '_', game_name)
+        os.makedirs(f"./dump/{san_name}", exist_ok=True)
+        os.makedirs(f"./dump/{san_name}/revisions", exist_ok=True)
+        os.makedirs(f"./dump/{san_name}/primary_binaries", exist_ok=True)
+        path = f"./dump/{san_name}/{func}.json"
+
+    with open(path, "w") as fh:
+        fh.write(json.dumps(obj, indent=4))
+
+
 def download_progress(url: str, dest: str):
     """Download a file."""
     try:
@@ -235,12 +252,22 @@ def main():
         help="The value of the oc_www_at cookie when logged into developers.meta.com/horizon",
     )
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-n", "--name", help="Name of the game to download")
+    group.add_argument(
+        "-n",
+        "--name",
+        help="Name of the game to download"
+    )
     group.add_argument(
         "-l",
         "--list",
         action="store_true",
         help="List the games/apps you own and can download.",
+    )
+    group.add_argument(
+        "-d",
+        "--dump-all",
+        action="store_true",
+        help="Dump all info for all apps for debugging to a ./dump directory"
     )
     args = parser.parse_args()
 
@@ -253,6 +280,53 @@ def main():
         .get("active_entitlements", {})
         .get("nodes", [])
     )
+
+    # Dump a bunch of stuff
+    # TODO: Remove me someday
+    if args.dump_all:
+        print("Dump entitlements")
+        dump_obj(None, "get_active_entitlements", obj)
+        for game in games:
+            game_name = game.get("item", {}).get("display_name")
+            game_id = game.get("item", {}).get("id")
+
+            print(f"Dump {game_name}")
+            release_channels = client.get_app_release_channels(game_id)
+            dlcs = client.get_app_dlcs(game_id)
+            app_details = client.get_app_details(game_id)
+            all_versions = client.get_app_all_versions(game_id)
+            latest_version = client.get_app_latest_version(game_id)
+
+            dump_obj(game_name, f"release-channels", release_channels)
+            dump_obj(game_name, f"dlcs", dlcs)
+            dump_obj(game_name, f"app-details", app_details)
+            dump_obj(game_name, f"all-versions", all_versions)
+            dump_obj(game_name, f"latest-version", latest_version)
+
+            revisions = all_versions.get("data", {}).get("node", {}).get("revisions", {}).get("nodes", [])
+            binaries = all_versions.get("data", {}).get("node", {}).get("primary_binaries", {}).get("nodes", [])
+
+            for revis in revisions:
+                rev_id = revis.get("id")
+                if not rev_id:
+                    continue
+                print(f"{game_name} getting asset file for revisions {rev_id}")
+                asset_files = client.get_asset_files(game_id, rev_id)
+                dump_obj(game_name, f"revisions/asset-files-{rev_id}", asset_files)
+
+            for prim_bin in binaries:
+                bin_id = prim_bin.get("id")
+                if not bin_id:
+                    continue
+                print(f"{game_name} getting binary details for {prim_bin.get("file_name", "<unknown>")}")
+                deets = client.get_binary_details(bin_id)
+                add_deets = client.get_additional_binary_details(bin_id)
+                dump_obj(game_name, f"primary_binaries/details-{bin_id}", deets)
+                dump_obj(game_name, f"primary_binaries/add-details-{bin_id}", add_deets)
+
+
+        return
+
     games_by_name = {}
     if args.list:
         print("Games:")
@@ -278,15 +352,28 @@ def main():
         return
 
     app_versions = client.get_app_release_channels(game_id)
-    version_id = (
+    release_channels = (
         app_versions.get("data", {})
         .get("node", {})
-        .get("primary_binaries")
-        .get("nodes")[0]
-        .get("id", None)
+        .get("release_channels", {})
+        .get("nodes", [])
     )
+    if not release_channels:
+        print("No release channels fround")
+        return
+    
+    # Latest?
+    version_id = release_channels[0].get("id")
+    if not version_id:
+        print("Unable to get latest version ID")
+        return
+
+    asset_files = client.get_asset_files(game_id, version_id)
+    print(json.dumps(asset_files, indent=4))
+    return
 
     download_url = f"https://securecdn.oculus.com/binaries/download/?id={version_id}&access_token={args.access_token}"
+    print(f"Download from: {download_url}")
     download_progress(download_url, f"{game_name}.apk")
 
 
